@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>OI2018 Problem 2 - Nonchalance (NIE)</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Zilla+Slab" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.15.0/themes/prism.min.css" />
+  <style>
+  body {
+    font-family: 'Zilla Slab', serif;
+    font-size: larger;
+    background-color: #F8FAFC;
+    color: #444444;
+    padding-left: 20%;
+    padding-right: 20%;
+  }
+  a {
+    color: #466DB2;
+  }
+  </style>
+</head>
+<body>
+  <h1>Problem 2</h1>
+  <h1><a href="https://szkopul.edu.pl/problemset/problem/PIWHXi6DUtOUJJ0Z2KFUCuYI/site/?key=statement">Nonchalance (NIE)</a></h1>
+
+  <h2>Introduction</h2>
+
+  <p>This is the fourth problem from 2018 Polish Computer Science Olympics that we are solving. Here are the other three articles, in order of (subjective) difficulty:</p>
+  <p><a href="https://gibki.github.io/io2018par">Problem 3 - Pair of Necklaces https://gibki.github.io/io2018par</a></p>
+  <p><a href="https://gibki.github.io/io2018rob">Problem 5 - Robby the Little Robot https://gibki.github.io/io2018rob</a></p>
+  <p></p><a href="https://gibki.github.io/io2018klu">Problem 1 - Club Members 2 https://gibki.github.io/io2018klu</a></p>
+
+  <p>The repository with all the code and example datasets can be found here: <a href="https://github.com/gibki/io2018nie">https://github.com/gibki/io2018nie</a>.</p>
+
+  <h2>Problem Description</h2>
+
+  <p>You've been given unreasonably difficult homework. You are given two sequences of aminoacids (strings of letters ACGT) and you have to find the longest common subsequence.</p>
+  <p>A subsequence does not have to be continuous, you can skip characters, but you have to preserve the order.</p>
+  <p>The task is actually so difficult, that even checking if your solution is correct is hard. The teacher, known for his laziness, is expected to not check the answer very thoroughly. Instead of finding the longest subsequence himself, he will just check if your solution is a common subsequence of both sequences and if it can be extended by a single aminoacid, inserted anywhere in your sequence, to produce a longer common subsequence. If it cannot be extended this way, you will get full points.</p>
+
+  <h2>Something different</h2>
+
+  <p>This problem is not like the others we were solving up to this point. No simple calculation will do, we actually have to construct an answer, and there can be more then one correct answer. The example dataset looks like this:</p>
+  <pre class=" language-python"><code class=" language-python">
+  ACTAGG
+  GATCA
+  </code></pre>
+  And the correct solutions listed are G, ACA and ATA. If your answer was to be checked thoroughly, producing G as the longest common subsequence would obviously be wrong. But as it happens, none of the sequences AG, CG, TG, GG, GA, GC or GT are a common subsequence of both of those chains, so that answer is correct, or at least the teacher will not find it to be wrong.
+  <p>The original problem assigned to you, without the lackluster method of checking the answer, is actually a very well known and studied classical problem in computer science unsurprisingly called <a href="https://en.wikipedia.org/wiki/Longest_common_subsequence_problem">Longest Common Subsequence or LCS</a>. In our particular case of only 2 subchains and only 4 possible characters a decent solution exists and you could be a good student and solve Mr. Byteasar's task properly. But the way your answer is graded changes the problem completely. We are no longer looking for the longest common subsequnce but for any non-extendable common subsequence. The problem is simpler in terms of complexity, so our algorithm should be less complex as well.</p>
+
+  <h2>Know your enemy</h2>
+
+  <p>Let's start with writing Mr. Byteasar's program that will check our answer. The input will be three sequences - first two just like in the problem and the third one will be the subsequence we came up with.
+  <p>The first bit of code we need is a function that checks if one sequence is a subsequence of another. Here's one version:</p>
+  <pre class=" language-python"><code class=" language-python">
+  def is_subsequence(pattern, sequence):
+      index = 0
+
+      for character in pattern:
+          # skip over different characters
+          while index < len(sequence) and sequence[index] != character:
+              index += 1
+
+          # use found character
+          index += 1
+
+      return index <= len(sequence)
+  </code></pre>
+  <p>A simple approach would be then to generate all the subsequences extended by one character:</p>
+  <pre class=" language-python"><code class=" language-python">
+  def generate_longer_sequences(sequence):
+      for split in range(len(sequence + 1)):
+          for character in 'ACGT':
+              yield sequence[:split] + character + sequence[split:]
+  </code></pre>
+  <p>We can use those two functions to check our answer like so (file <i>check_nie.py</i>):</p>
+  <pre class=" language-python"><code class=" language-python">
+  S = input()
+  T = input()
+  W = input()
+
+  def is_subsequence(pattern, sequence):
+      index = 0
+
+      for character in pattern:
+          # skip over different characters
+          while index < len(sequence) and sequence[index] != character:
+              index += 1
+
+          # use found character
+          index += 1
+
+      return index <= len(sequence)
+
+  def generate_longer_sequences(sequence):
+      for split in range(len(sequence) + 1):
+          for character in 'ACGT':
+              yield sequence[:split] + character + sequence[split:]
+
+
+  if not is_subsequence(W, S):
+      print('{} not a subsequence of {}'.format(W, S))
+      exit(1)
+
+  if not is_subsequence(W, T):
+      print('{} not a subsequence of {}'.format(W, T))
+      exit(1)
+
+  for sequence in generate_longer_sequences(W):
+      if is_subsequence(sequence, S) and is_subsequence(sequence, T):
+          print('Longer subsequence found: {}'.format(sequence))
+          exit(1)
+  </code></pre>
+  <p>But we can also use them to generate answers for the first version of our algorithm (file <i>nie1.py</i>):</p>
+  <pre class=" language-python"><code class=" language-python">
+  S = input()
+  T = input()
+
+  def is_subsequence(pattern, sequence):
+      index = 0
+
+      for character in pattern:
+          # skip over different characters
+          while index < len(sequence) and sequence[index] != character:
+              index += 1
+
+          # use found character
+          index += 1
+
+      return index <= len(sequence)
+
+  def generate_longer_sequences(sequence):
+      for split in range(len(sequence)+ 1):
+          for character in 'ACGT':
+              yield sequence[:split] + character + sequence[split:]
+
+
+  old_sequence = 'enter the loop at least once'
+  new_sequence = ''
+
+  while new_sequence != old_sequence:
+      old_sequence = new_sequence
+
+      for sequence in generate_longer_sequences(old_sequence):
+          if is_subsequence(sequence, S) and is_subsequence(sequence, T):
+              new_sequence = sequence
+              break
+
+
+  print(new_sequence)
+  </code></pre>
+  <p>Both algorithms are not very efficient. Just testing our answer this way is \(O(n^2)\) so let's try to improve it first.</p>
+
+  <h2>Like an abacus</h2>
+
+  <p>Take a closer look at the function <i>is_subsequence</i>. Checking if sequence \(W\) is a subsequence of \(S\) and \(T\) this way actually finds the very first occurence of that subsequence. This is immediately usefull if we want to know if the common subsequence can be extended at the very end. We just examine all the characters after the first occurence of the subsequnce. If we find the same character at the ends of both \(S\) and \(T\), that's how we can extend \(W\). Since this is the first occurence of \(W\) we have the most characters to work with, and if we don't find a match for this occurence we won't find it for others.</p>
+  <p>If we reverse all the sequences our function will find the very last occurence of \(W\). Of course we can use it to check if \(W\) can be extended at the beginning, but with both the first and the last occurence we can check any position.</p>
+  <p>If we want to check what characters could extend \(W\) between \(W_k\) and \(W_{k+1}\) we use the same idea - find the occurence with most characters in this chunk. That's the chunk between \(W_k\) in the first occurence and \(W_{k+1}\) in the last occurence. Turns out we can do this efficiently for all positions in \(W\).</p>
+  <p>Suppose we have these three sequences to check:</p>
+  <pre class=" language-python"><code class=" language-python">
+       v  vv
+    S  ATACAATCGA
+            ^ ^ ^
+         vv   v
+    T  GGACGCGA
+         ^  ^ ^
+    W  ACA
+  </code></pre>
+  <p>I've marked the first and the last occurence of \(W\) in each. Let's now split our sequences into three chunks. The first one will be empty at the start. The second one will contain all the characters until character \(W_0=A\) in the last occurence, and the third one all the rest:</p>
+  <pre class=" language-python"><code class=" language-python">
+      v
+   S  -  ATACA  ATCGA
+                ^
+      v
+   T  -  GG  ACGCGA
+             ^
+   W  ACA
+     ^
+  </code></pre>
+  <p>To see if we can extend \(W\) at the start we need to check chunks of both \(S\) and \(T\) from the beginning to the position of \(W_0=A\) in the last occurence. This is the middle of our three chunks. After we are satisfied that there are no common characters in ATACA and GG, we "slide" characters to the left. From the middle chunk we remove characters up to (and including) \(W_0=A\) in the first occurence. To the middle chunk we add characters up to (not including) \(W_1=C\) in the last occurence:</p>
+  <pre class=" language-python"><code class=" language-python">
+     v
+  S  A  TACAAT  CGA
+                ^
+       v
+  T  GGA  CG  CGA
+              ^
+  W  A  CA
+      ^
+  </code></pre>
+  <p>To check if we can extend \(W\) between \(W_0=A\) and \(W_1=C\) we check the chunks between \(W_0=A\) in the first occurence and \(W_1=C\) in the last occurence, which is again the middle of our three chunks. In this example there is a common character C between TACAAT and CG in those chunks, so ACCA is a longer common subsequence. If we didn't find a match we would continue "sliding" the characters left like so:</p>
+  <pre class=" language-python"><code class=" language-python">
+         v
+   S  ATAC  AATCG  A
+                   ^
+         v
+   T  GGAC  GCG  A
+                 ^
+   W  AC  A
+        ^
+ </code></pre>
+  <p>Now we are checking chunks between \(W_1=C\) in the first occurence and \(W_2=A\) in the last occurence. We can extend the sequence to ACCA again, at a different place, but also to ACGA. Finally we would check the chunks between \(W_2=A\) in the first occurence and the end of the sequence:</p>
+  <pre class=" language-python"><code class=" language-python">
+         v
+  S  ATACA  ATCGA  -
+                   ^
+            v
+  T  GGACGCGA  -  -
+                  ^
+  W  ACA
+        ^
+  </code></pre>
+  <p>In this example the final chunk of \(T\) is empty, so \(W\) cannot be extended at the end.</p>
+  <p>All this sliding is cool even it is slightly confusing, but what makes this approach useful is that we can simply count the number of characters in the chunks to see if \(W\) can be extended there. If there are more than zero As, for example, in both chunks, we can extend \(W\) by adding A at current position. When we perform each "slide" we can update this count and have the answer for the next chunk ready. Since we never slide more than \(n\) characters total, this approach to checking the answer is \(O(n)\).</p>
+  <p>To perform the sliding we will need positions of each character in both the first and the last occurence. We can slightly modify our <i>is_subsequence</i> function to produce those for us:</p>
+  <pre class=" language-python"><code class=" language-python">
+  def find_positions_of_first_occurence(pattern, sequence):
+      positions = []
+      index = 0
+
+      for character in pattern:
+          # skip over different characters
+          while index < len(sequence) and sequence[index] != character:
+              index += 1
+
+          # use found character
+          if index < len(sequence):
+              positions.append(index)
+              index += 1
+          else:
+              return []
+
+      return positions
+  </code></pre>
+  <p>As I've mentioned we can also use this function to find the last occurence, with some slight modifications:</p>
+  <pre class=" language-python"><code class=" language-python">
+  def find_positions_of_last_occurence(pattern, sequence):
+      return [len(sequence) - 1 - x for x in
+              reversed(find_positions_of_first_occurence(reversed(pattern), list(reversed(sequence))))]
+  </code></pre>
+  <p>A quirk of note in Python - <i>reversed(W)</i> returns a <i>generator</i>. If we only need to iterate over the result there's no difference from a list, so we can use it for the <i>pattern</i> argument. But we we are accessing elements of <i>sequence</i> by their index so here we need a list. We could use <i>S.reverse()</i> but it changes \(S\) in place and returns nothing, so we would have to <i>reverse</i> our sequences before the calculation and then <i>reverse</i> them back. So in order to to produce a new reversed list we forcefully convert the result of a generator to a list. Apparently people consider it idiomatic to reverse lists like this with a slicing trick <i>S[::-1]</i>, but personally I find it slightly confusing. Just an edge case in object interfaces I guess, but it's worth knowing.</p>
+  <p>In our previous example, the results of those calculations would be:</p>
+  <pre class=" language-python"><code class=" language-python">
+     v  vv
+  S  ATACAATCGA
+          ^ ^ ^
+       vv   v
+  T  GGACGCGA
+       ^  ^ ^
+
+  first_S = [0, 3, 4]
+  first_T = [2, 3, 7]
+
+  last_S = [5, 7, 9]
+  last_T = [2, 5, 7]
+  </code></pre>
+  <p>Let's write a function that will count the specified character in each chunk. We want it to work something like this:</p>
+  <pre class=" language-python"><code class=" language-python">
+  def calculate_chunk_counts(character, pattern, sequence):
+    # TODO
+     ...
+
+  S = 'ATACAATCGA'
+  T = 'GGACGCGA'
+  W = 'ACA'
+
+  calculate_chunk_counts('A', W, S)
+      [3,  # ATACA       [0, 5)
+       3,  #  TACAAT     [1, 7)
+       2,  #     AATCG   [4, 9)
+       2]  #      ATCGA  [5, 10)
+  calculate_chunk_counts('C', W, T)
+      [0,  # GG          [0, 2)
+       1,  #    CG       [3, 5)
+       1,  #     GCG     [4, 7)
+       0]  #          -  [8, 8)
+  </code></pre>
+  <p>You might have noticed that the ranges don't exactly line up with the results of our first occurence position function, but that's because that function points out the last character to exlude in each chunk, and the ranges are written as left-inclusive, since that's how the <i>range</i> function works. We will have to manually add one to each value for first occurence.</p>
+  <p>The other issue is that we have 3 characters in \(W\) but 4 chunks. I've handled this by prepending first occurences with 0 and appending the length of the <i>sequence</i> to last occurences:</p>
+  <pre class=" language-python"><code class=" language-python">
+    def calculate_chunk_counts(character, pattern, sequence):
+        first_occurence_positions = find_positions_of_first_occurence(pattern, sequence)
+        last_occurence_positions = find_positions_of_last_occurence(pattern, sequence)
+
+        first_occurence_positions = [0] + [x + 1 for x in first_occurence_positions]
+        last_occurence_positions = last_occurence_positions + [len(sequence)]
+
+        ...
+
+  </code></pre>
+  <p>Now <i>first_occurence_positions[k], last_occurence_positions[k]</i> is the \(k\)-th chunk, left inclusive, right exclusive.</p>
+  <p>Unfortunately, we can't just count characters in each chunk separately, because that turns the function quadratic. We need to perform the "slides" to keep a running count:</p>
+  <pre class=" language-python"><code class=" language-python">
+  def calculate_chunk_counts(pattern, sequence):
+
+      ...
+
+      counts = []
+      current_count = 0
+
+      # first chunk
+      for c in sequence[:last_occurence_positions[0]]:
+          if c == character:
+              current_count += 1
+      counts.append(current_count)
+
+      for pattern_index in range(len(pattern)):
+          # slide out characters on the left side
+          for sequence_index in range(first_occurence_positions[pattern_index],
+                                      first_occurence_positions[pattern_index + 1]):
+              if sequence[sequence_index] == character:
+                  current_count -= 1
+
+          # slide in characters from the right side
+          for sequence_index in range(last_occurence_positions[pattern_index],
+                                      last_occurence_positions[pattern_index + 1]):
+              if sequence[sequence_index] == character:
+                  current_count += 1
+
+          counts.append(current_count)
+
+      return counts
+  </code></pre>
+  <p>With this function the main loop is rather simple:</p>
+  <pre class=" language-python"><code class=" language-python">
+
+  ...
+
+  for character in 'ACGT':
+      for count_S, count_T in zip(calculate_chunk_counts(character, W, S),
+                                  calculate_chunk_counts(character, W, T)):
+        if count_S * count_T > 0:
+            print('Longer subsequence found')
+            exit(1)
+  </code></pre>
+  <p>But in the full version I also included more information about the sequence (file <i>check_nie.py</i>):</p>
+  <pre class=" language-python"><code class=" language-python">
+  S = input()
+  T = input()
+  W = input()
+
+
+  ALPHABET = 'ACGT'
+
+
+  def find_positions_of_first_occurence(pattern, sequence):
+      positions = []
+      index = 0
+
+      for character in pattern:
+          # skip over different characters
+          while index < len(sequence) and sequence[index] != character:
+              index += 1
+
+          # use found character
+          if index < len(sequence):
+              positions.append(index)
+              index += 1
+          else:
+              return []
+
+      return positions
+
+  def find_positions_of_last_occurence(pattern, sequence):
+      return [len(sequence) - 1 - x for x in
+          reversed(find_positions_of_first_occurence(reversed(pattern), list(reversed(sequence))))]
+
+  def calculate_chunk_counts(character, pattern, sequence):
+      first_occurence_positions = find_positions_of_first_occurence(pattern, sequence)
+      last_occurence_positions = find_positions_of_last_occurence(pattern, sequence)
+
+      # adjust for range inclusion, add terminators
+      first_occurence_positions = [0] + [x + 1 for x in first_occurence_positions]
+      last_occurence_positions = last_occurence_positions + [len(sequence)]
+
+      counts = []
+      current_count = 0
+
+      for c in sequence[:last_occurence_positions[0]]:
+          if c == character:
+              current_count += 1
+      counts.append(current_count)
+
+      for pattern_index in range(len(pattern)):
+          for sequence_index in range(first_occurence_positions[pattern_index],
+                                      first_occurence_positions[pattern_index + 1]):
+              if sequence[sequence_index] == character:
+                  current_count -= 1
+
+          for sequence_index in range(last_occurence_positions[pattern_index],
+                                      last_occurence_positions[pattern_index + 1]):
+              if sequence[sequence_index] == character:
+                  current_count += 1
+
+          counts.append(current_count)
+
+      return counts
+
+
+  if not find_positions_of_first_occurence(W, S):
+      print('{} not a subsequence of {}'.format(W, S))
+      exit(1)
+
+  if not find_positions_of_first_occurence(W, T):
+      print('{} not a subsequence of {}'.format(W, T))
+      exit(1)
+
+  for character in ALPHABET:
+      for split, (count_S, count_T) in enumerate(zip(calculate_chunk_counts(character, W, S),
+                                                      calculate_chunk_counts(character, W, T))):
+          if count_S * count_T > 0:
+              print('Longer subsequence found: {}{}{}'.format(W[:split], character, W[split:]))
+              exit(1)
+
+  </code></pre>
+  <p>And that's it, an \(O(n)\) version of the checker program. We could now use this method of checking to immediately improve our actual program from \(O(n^3)\) to \(O(n^2)\), but we can also do better.</p>
+
+  <h2>Live update</h2>
+
+  <p>You might have noticed that with those counts we know exactly how many characters can be inserted at each position. There are two issues we need to solve. To even start we need some common subsequence to calculate the positions of first and last occurences. Then, everytime we add characters those position could change, so we would have to recalculate them, or risk inserting too many characters. Or maybe we won't have to?</p>
+  <p>The starting sequence we can use is actually quite simple to construct. To simplify, let's assume for now that both sequences have some As in them. Our first candidate sequence is just AA...A, we are using all of the As in one of the sequences. That might sound obvious, but this sequence definitely cannot be extended by A at any position, so we no longer need to check for it. One letter of the aminoacid alphabet down, three more to go.</p>
+  <p>We could now calculate both first and last positions of that simple sequence, but let's only do it for the last occurence. We pick the next letter, let's say C, and begin checking the chunks. We can start without calculating position of the first occurence because the first chunk starts at the begining of the sequence and only depends on the last occurence.</p>
+  <p>Let's say that both counts are positive and our common sequence can be extended. We jam all of the Cs at the start of our common subsequence, so now it looks like CC...CAA...A. Only now we start calculating the first slide to the left, and only for the chunk that will definitely not change, CC...CA, all of the Cs and exactly one A. We inserted all those characters before the last occurence so our calculations are still corect and we can proceed to the next chunk etc.</p>
+  <p>Let's see this idea in action, for the following sequences:</p>
+  <pre class=" language-python"><code class=" language-python">
+  S  ACAACAAA
+  T  CAACA
+  </code></pre>
+  <p>We start with \(W=AAA\), last occurence positions are \([5, 6, 7]\) and \([1, 2, 4]\) respectively. For the very first chunk we get a count of \(C=2\) for \(S\) and \(C=1\) for \(T\):</p>
+  <pre class=" language-python"><code class=" language-python">
+  S  -  ACAAC  AAA
+  T  -  C  AACA
+  </code></pre>
+  <p>So the first know chunk of extended \(W\) is CA. We perform our slides:</p>
+  <pre class=" language-python"><code class=" language-python">
+  S  ACA  ACA  AA
+  T  CA  -  ACA
+  </code></pre>
+  <p>This time count for sequence \(T\) is 0, so the next know chunk of extended \(W\) is just A. Next slide:</p>
+  <pre class=" language-python"><code class=" language-python">
+  S  ACAA  CAA  A
+  T  CAA  C  A
+  </code></pre>
+  <p>We've found another possible extension to CA at this point. Last slide at the very end is empty:</p>
+  <pre class=" language-python"><code class=" language-python">
+  S  ACAACAAA  -  -
+  T  CAACA  -  -
+  </code></pre>
+  <p>the algorithm finishes iteraction for character C with new \(W=CAACA\).</p>
+  <p>So the last occurence positions for this new sequence in \(S\) is \([1, 2, 3, 4, 7]\), we've used different As in our calculation. You might be worried that this means we could have missed something. The first thing to realize is that for one of the sequences we are always correct, because we are using all of the As in it and the positions can't change. That's sequence \(T\) here. Then, when we perform the left hand slide for the known chunk, there are two options. We can be limited by the amount of Cs in sequence \(T\), this way the fact that we are using an inflated count for sequence \(S\) doesn't matter. If we were limited by the sequence \(S\) we have to use the exact same character as the one in our initial computation, as this is what the left hand slide will ensure.</p>
+  <p>So after this step we get a sequence that cannot be extended by either A or C at any position. Only now we recalculate the last occurence for our new sequence and run the same steps for the next letter. Every step so far was \(O(n)\) and we will do this as many times as there are letters in the aminoacid alphabet, so 4 times tops.</p>
+  <p>Before we get to coding, one more nice feature to notice. This algorithm bootstraps the sequence by itself, we can give it an empty sequence and just iterate over the letters. If you remember, we were extending the positions of last occurence by adding the length of the sequence at last position. If the sequence \(W\) is empty, that will be the only element of that list and we will get the count for the whole sequences \(S\) and \(T\). So if there are any As, we will pick all of them just like we did manually. If there are no As in one of the sequences that's fine as well, our common sequence stays empty and the algorithm moves on to the next letter. In the edge case that \(S\) and \(T\) don't share a character we would report empty longest common subsequence.</p>
+
+  <h2>State mess</h2>
+
+  <p>So far I've been writing purely structural programs in this series. That's mostly because of personal preference, I find that just functions, namespaces and built-in objects are enough for most cases, and limiting the use of my own objects makes me write simpler code.</p>
+  <p>To be honest I don't have a very nice way to implement this idea, and I had to resort to encapsulating some state in an object. Suppose we have some class <i>SequenceSlider</i> that will calculate the counts of chunks for us by performing the slides. Then the main loop looks straightforward:</p>
+  <pre class=" language-python"><code class=" language-python">
+
+  ...
+
+  longest_common_sequence = ''
+
+  for character in 'ACGT':
+      s_slider = SequenceSlider(character, longest_common_sequence, S)
+      t_slider = SequenceSlider(character, longest_common_sequence, T)
+
+      new_longest_common_sequence = ''
+
+      for common_sequence_character in longest_common_sequence:
+          added_chunk = min(s_slider.count, t_slider.count) * character + common_sequence_character
+
+          s_slider.slide(added_chunk)
+          t_slider.slide(added_chunk)
+
+          new_longest_common_sequence += added_chunk
+
+      new_longest_common_sequence += min(s_slider.count, t_slider.count) * character
+      longest_common_sequence = new_longest_common_sequence
+
+
+  print(longest_common_sequence)
+  </code></pre>
+  <p>As we've discussed, we start with an empty sequence and iterate over characters in the alphabet. We feed that information to our class. It's only job is to keep the count of current character updated between slides. With that we can continiously construct new chunks and feed them back to perform the slides. The only complication is that we have one more chunk than characters in the current longest sequence.</p>
+  <p>Now, for the messy part. We have two drifferent ways to slide. Left-side slides are basically the same idea as our <i>find_positions_of_first_occurence</i> function, but we also keep the count udpdated:</p>
+  <pre class=" language-python"><code class=" language-python">
+  class SequenceSlider:
+      def __init__(self, character, pattern, sequence):
+
+          ...
+
+          self._counted_character = character
+          self._sequence = sequence
+          self._left_last_index = 0
+
+      ...
+
+      def _slide_left(self, added_chunk):
+          for character in added_chunk:
+              while self._sequence[self._left_last_index] != character:
+                  if self._sequence[self._left_last_index] == self._counted_character:
+                      self._count -= 1
+                  self._left_last_index += 1
+
+              if self._sequence[self._left_last_index] == self._counted_character:
+                  self._count -= 1
+              self._left_last_index += 1
+  </code></pre>
+  <p>The class is here to remeber where the last slide ended in <i>self._last_left_index</i>. Notice that we don't need to check if that index is still inside <i>self._sequence</i>, that's guaranteed if we didn't mess up our algorithm.</p>
+  <p>Right slides need to precompute the positions of last occurence of provided <i>pattern</i> in <i>sequence</i>. Once we have that, the slide itself is very similar to what we did in the checker program:</p>
+  <pre class=" language-python"><code class=" language-python">
+  class SequenceSlider:
+      def __init__(self, character, pattern, sequence):
+
+          ...
+          self._last_occurence_positions = find_positions_of_last_occurence(pattern, sequence) + [len(sequence)]
+          self._sequence = sequence
+          self._counted_character = character
+          self._right_last_index = 0
+
+      ...
+
+      def _slide_right(self):
+          slide_chunk_start = self._last_occurence_positions[self._right_last_index]
+          slide_chunk_end = self._last_occurence_positions[self._right_last_index + 1]
+          for character in self._sequence[slide_chunk_start:slide_chunk_end]:
+              if character == self._counted_character:
+                  self._count += 1
+          self._right_last_index += 1
+  </code></pre>
+  <p>We use pairs of indexes from the list and we extend the list by the length of the sequence to get the last chunk. The class is here to keep track of which pair of indexes is next in <i>self._right_last_index</i>.</p>
+  <p>One last thing is to remember to initialize the count right off the bat, since we need it before the first slide. Here's the full \(O(n)\) version (file <i>nie.py</i>):</p>
+  <pre class=" language-python"><code class=" language-python">
+  S = input()
+  T = input()
+
+  ALPHABET = 'ACGT'
+
+
+  def find_positions_of_first_occurence(pattern, sequence):
+      positions = []
+      index = 0
+
+      for character in pattern:
+          # skip over different characters
+          while index < len(sequence) and sequence[index] != character:
+              index += 1
+
+          # use found character
+          if index < len(sequence):
+              positions.append(index)
+              index += 1
+          else:
+              return []
+
+      return positions
+
+  def find_positions_of_last_occurence(pattern, sequence):
+      return [len(sequence) - 1 - x for x in
+          reversed(find_positions_of_first_occurence(reversed(pattern), list(reversed(sequence))))]
+
+  def count_character(pattern, sequence):
+      count = 0
+
+      for character in sequence:
+          if character == pattern:
+              count += 1
+
+      return count
+
+  class SequenceSlider:
+      def __init__(self, counted_character, pattern, sequence):
+          self._counted_character = character
+          self._sequence = sequence
+          self._last_occurence_positions = find_positions_of_last_occurence(pattern, sequence) + [len(sequence)]
+          self._count = count_character(counted_character, sequence[:self._last_occurence_positions[0]])
+          self._left_last_index = 0
+          self._right_last_index = 0
+
+      @property
+      def count(self):
+          return self._count
+
+      def slide(self, added_chunk):
+          self._slide_left(added_chunk)
+          self._slide_right()
+
+      def _slide_left(self, added_chunk):
+          for character in added_chunk:
+              while  self._sequence[self._left_last_index] != character:
+                  if self._sequence[self._left_last_index] == self._counted_character:
+                      self._count -= 1
+                  self._left_last_index += 1
+
+              if self._sequence[self._left_last_index] == self._counted_character:
+                  self._count -= 1
+              self._left_last_index += 1
+
+      def _slide_right(self):
+          slide_chunk_start = self._last_occurence_positions[self._right_last_index]
+          slide_chunk_end = self._last_occurence_positions[self._right_last_index + 1]
+          for character in self._sequence[slide_chunk_start:slide_chunk_end]:
+              if character == self._counted_character:
+                  self._count += 1
+          self._right_last_index += 1
+
+
+  longest_common_sequence = ''
+
+  for character in ALPHABET:
+      s_slider = SequenceSlider(character, longest_common_sequence, S)
+      t_slider = SequenceSlider(character, longest_common_sequence, T)
+
+      new_longest_common_sequence = ''
+
+      for common_sequence_character in longest_common_sequence:
+          added_chunk = min(s_slider.count, t_slider.count) * character + common_sequence_character
+
+          s_slider.slide(added_chunk)
+          t_slider.slide(added_chunk)
+
+          new_longest_common_sequence += added_chunk
+
+      new_longest_common_sequence += min(s_slider.count, t_slider.count) * character
+      longest_common_sequence = new_longest_common_sequence
+
+
+  print(longest_common_sequence)
+
+  </code></pre>
+
+  <h2>Further work</h2>
+  <p>The algorithm works and is efficient, but it looks and feels like I got stuck with this idea and could not come up with a really simple form, so I would love to see a prettier version of this.</p>
+  <p>It might be interesting to choose the order of characters from the alphabet in some way instead of mindlessly iterating over them. Like picking least common characters first, that would produce the result G for the example dataset and it might be faster.</p>
+  <p>As always there are probably many microoptimizations you could do here, but I don't personally find them interesting or in the spirit of this competition.</p>
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" async></script>
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.15.0/prism.min.js"></script>
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.15.0/components/prism-python.min.js"></script>
+</body>
+</html>
